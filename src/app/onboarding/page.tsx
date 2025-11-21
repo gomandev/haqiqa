@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { UserRole } from '@/lib/types';
 
@@ -17,11 +17,13 @@ export default function OnboardingPage() {
     const [username, setUsername] = useState('');
     const [displayName, setDisplayName] = useState('');
     const [bio, setBio] = useState('');
-    const [interests, setInterests] = useState<string[]>([]);
 
     useEffect(() => {
         if (user) {
             setDisplayName(user.name || '');
+            if (user.username) {
+                setUsername(user.username);
+            }
             if (user.isProfileComplete) {
                 router.push(user.role === 'admin' ? '/admin' : '/');
             }
@@ -41,14 +43,20 @@ export default function OnboardingPage() {
         setLoading(true);
 
         try {
+            const { setDoc } = await import('firebase/firestore');
             const userRef = doc(db, 'users', user.id);
-            await updateDoc(userRef, {
+
+            // Use setDoc with merge: true to handle both existing and new documents
+            await setDoc(userRef, {
                 name: displayName,
                 username,
-                bio: user.role === 'creator' ? bio : undefined,
+                bio: user.role === 'creator' ? bio : null,
                 isProfileComplete: true,
-                // Add other fields as needed
-            });
+                email: user.email, // Ensure email is saved
+                role: user.role,   // Ensure role is saved
+                savedContentIds: user.savedContentIds || [],
+                followingCreatorIds: user.followingCreatorIds || [],
+            }, { merge: true });
 
             // Redirect based on role
             router.push(user.role === 'admin' ? '/admin' : '/');

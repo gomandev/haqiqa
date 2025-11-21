@@ -13,18 +13,14 @@ export default function CreatorDashboard() {
     const { user, isLoading } = useAuth();
     const router = useRouter();
 
+    const [myContent, setMyContent] = useState<Content[]>([]);
+    const [loadingContent, setLoadingContent] = useState(true);
+
     useEffect(() => {
         if (!isLoading && (!user || user.role !== 'creator')) {
             router.push('/login');
         }
     }, [user, isLoading, router]);
-
-    if (isLoading || !user || user.role !== 'creator') {
-        return <div className="flex h-96 items-center justify-center">Loading...</div>;
-    }
-
-    const [myContent, setMyContent] = useState<Content[]>([]);
-    const [loadingContent, setLoadingContent] = useState(true);
 
     useEffect(() => {
         async function fetchContent() {
@@ -45,9 +41,12 @@ export default function CreatorDashboard() {
         }
     }, [user, isLoading]);
 
+    if (isLoading || !user || user.role !== 'creator') {
+        return <div className="flex h-96 items-center justify-center">Loading...</div>;
+    }
+
     // Safe access to creator specific fields with fallback
     const followersCount = (user as any).followersCount || 0;
-
     const totalViews = myContent.reduce((acc, curr) => acc + curr.views, 0);
     const totalLikes = myContent.reduce((acc, curr) => acc + curr.likes, 0);
 
@@ -60,12 +59,39 @@ export default function CreatorDashboard() {
                 </div>
                 <Link
                     href="/upload"
-                    className="inline-flex items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow transition-colors hover:bg-primary-700"
+                    className="inline-flex items-center text-dark justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow transition-colors hover:bg-primary-700"
                 >
                     <Plus className="mr-2 h-4 w-4" />
                     New Content
                 </Link>
             </div>
+
+            {!user?.isProfileComplete && (
+                <div className="mb-8 rounded-md bg-yellow-50 p-4 border border-yellow-200">
+                    <div className="flex">
+                        <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <div className="ml-3">
+                            <h3 className="text-sm font-medium text-yellow-800">Profile Incomplete</h3>
+                            <div className="mt-2 text-sm text-yellow-700">
+                                <p>
+                                    Your profile is missing some details. Please complete it to unlock all features.
+                                </p>
+                            </div>
+                            <div className="mt-4">
+                                <div className="-mx-2 -my-1.5 flex">
+                                    <a href="/onboarding" className="rounded-md bg-yellow-50 px-2 py-1.5 text-sm font-medium text-yellow-800 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:ring-offset-2 focus:ring-offset-yellow-50">
+                                        Complete Profile
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Analytics Overview */}
             <div className="grid gap-4 md:grid-cols-3">

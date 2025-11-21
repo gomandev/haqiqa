@@ -16,6 +16,7 @@ import { doc, getDoc, onSnapshot, setDoc, serverTimestamp } from 'firebase/fires
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
+    isAuthenticated: boolean;
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string, role?: UserRole) => Promise<void>;
     logout: () => Promise<void>;
@@ -36,8 +37,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     if (docSnapshot.exists()) {
                         setUser({ id: docSnapshot.id, ...docSnapshot.data() } as User);
                     } else {
-                        console.log('User authenticated but profile not found (yet).');
-                        setUser(null);
+                        console.log('User authenticated but profile not found. Creating temporary session user.');
+                        // Create a temporary user object so the user is "logged in" and can complete onboarding
+                        setUser({
+                            id: firebaseUser.uid,
+                            email: firebaseUser.email || '',
+                            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                            role: 'user', // Default role
+                            savedContentIds: [],
+                            followingCreatorIds: [],
+                            isProfileComplete: false
+                        });
                     }
                     setIsLoading(false);
                 }, (error) => {
@@ -73,6 +83,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Special check for the requested admin user
             const finalRole = email === 'masmedia112255@gmail.com' ? 'admin' : role;
 
+            // Generate default username
+            const defaultUsername = `user_${Math.floor(Math.random() * 1000000)}`;
+
             const userData: User = {
                 id: uid,
                 email,
@@ -82,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 followingCreatorIds: [],
                 createdAt: new Date().toISOString(),
                 isProfileComplete: false,
+                username: defaultUsername,
             };
 
             // Write to Firestore
@@ -91,7 +105,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
 
             setUser(userData);
-            router.push('/onboarding');
+
+            // Redirect based on role
+            if (finalRole === 'admin') {
+                router.push('/admin');
+            } else if (finalRole === 'creator') {
+                router.push('/dashboard');
+            } else {
+                router.push('/');
+            }
         } catch (error) {
             console.error('Registration failed:', error);
             throw error;
@@ -111,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         <AuthContext.Provider value={{
             user,
             isLoading,
+            isAuthenticated: !!user,
             login,
             register,
             logout

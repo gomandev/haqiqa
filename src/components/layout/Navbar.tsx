@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, Bell, User, Menu } from 'lucide-react';
+import { Search, Bell, User, Menu, Pen } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
-    const { user, logout } = useAuth();
+    const { user, logout, isAuthenticated } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     return (
@@ -51,16 +51,24 @@ export default function Navbar() {
                     )}
 
                     <nav className="flex items-center space-x-2">
-                        {user ? (
+                        {isAuthenticated && user ? (
                             <>
                                 {user.isProfileComplete && (
                                     <>
                                         {user.role === 'creator' && (
-                                            <Link href="/upload">
-                                                <button className="hidden sm:inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
-                                                    Upload
-                                                </button>
-                                            </Link>
+                                            <>
+                                                <Link href="/write">
+                                                    <button className="hidden sm:inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 mr-2">
+                                                        <Pen className="mr-2 h-4 w-4" />
+                                                        <span>Write</span>
+                                                    </button>
+                                                </Link>
+                                                <Link href="/upload">
+                                                    <button className="hidden sm:inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                                                        Upload
+                                                    </button>
+                                                </Link>
+                                            </>
                                         )}
                                         {(user.role === 'creator' || user.role === 'admin') && (
                                             <Link href="/dashboard">
@@ -69,7 +77,7 @@ export default function Navbar() {
                                                 </button>
                                             </Link>
                                         )}
-                                        <Link href="/profile">
+                                        <Link href={user.role === 'admin' ? '/admin' : user.role === 'creator' ? '/dashboard' : '/profile'}>
                                             <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9">
                                                 <User className="h-5 w-5" />
                                                 <span className="sr-only">Profile</span>

@@ -83,3 +83,35 @@ export async function createContent(content: Omit<Content, 'id' | 'createdAt' | 
         likes: 0
     });
 }
+
+export async function getUsersByIds(userIds: string[]): Promise<User[]> {
+    if (!userIds || userIds.length === 0) return [];
+
+    // Firestore 'in' limit is 10. For now, we'll just fetch individually if > 10 or use chunks.
+    // For simplicity in this MVP, let's fetch individually using Promise.all which is parallel.
+    // In production, you'd want to chunk this into groups of 10 and use 'in' queries.
+
+    const userPromises = userIds.map(id => getUser(id));
+    const users = await Promise.all(userPromises);
+    return users.filter(user => user !== null) as User[];
+}
+
+export async function getContentByIds(contentIds: string[]): Promise<Content[]> {
+    if (!contentIds || contentIds.length === 0) return [];
+
+    const contentPromises = contentIds.map(async (id) => {
+        const docRef = doc(db, CONTENT_COLLECTION, id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return {
+                id: docSnap.id,
+                ...docSnap.data(),
+                createdAt: (docSnap.data().createdAt as Timestamp)?.toDate().toISOString() || new Date().toISOString()
+            } as Content;
+        }
+        return null;
+    });
+
+    const content = await Promise.all(contentPromises);
+    return content.filter(c => c !== null) as Content[];
+}

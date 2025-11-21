@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // User profiles
+    match /users/{userId} {
+      // Users can read and write their own profile
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Admins can read all profiles
+      allow read: if isAdmin();
+    }
+    
+    // Content
+    match /content/{contentId} {
+      // Anyone can read approved content (adjust as needed)
+      allow read: if true;
+      // Authenticated users can create content
+      allow create: if request.auth != null;
+      // Creators can update/delete their own content, Admins can manage all
+      allow update, delete: if request.auth != null && (resource.data.creatorId == request.auth.uid || isAdmin());
+    }
+  }
+}

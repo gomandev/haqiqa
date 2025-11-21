@@ -34,4 +34,5 @@ export interface Content {
     status: ReviewStatus;
     views: number;
     likes: number;
+    content?: string; // HTML content for blogs
 }
