@@ -8,6 +8,9 @@ export interface User {
     avatarUrl?: string;
     savedContentIds: string[];
     followingCreatorIds: string[];
+    createdAt?: string;
+    isProfileComplete?: boolean;
+    username?: string;
 }
 
 export interface Creator extends User {

@@ -3,12 +3,22 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { auth, db } from '@/lib/firebase';
+import {
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged,
+    User as FirebaseUser
+} from 'firebase/auth';
+import { doc, getDoc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
-    login: (email: string, role: UserRole) => void;
-    logout: () => void;
+    login: (email: string, password: string) => Promise<void>;
+    register: (email: string, password: string, role?: UserRole) => Promise<void>;
+    logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,52 +29,92 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
 
     useEffect(() => {
-        // Check localStorage on mount
-        const storedUser = localStorage.getItem('haqiqa_user');
-        if (storedUser) {
-            try {
-                setUser(JSON.parse(storedUser));
-            } catch (e) {
-                console.error('Failed to parse user from local storage', e);
-                localStorage.removeItem('haqiqa_user');
+        const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+            if (firebaseUser) {
+                // Subscribe to the user's Firestore document
+                const unsubscribeFirestore = onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnapshot) => {
+                    if (docSnapshot.exists()) {
+                        setUser({ id: docSnapshot.id, ...docSnapshot.data() } as User);
+                    } else {
+                        console.log('User authenticated but profile not found (yet).');
+                        setUser(null);
+                    }
+                    setIsLoading(false);
+                }, (error) => {
+                    console.error('Error fetching user profile:', error);
+                    setIsLoading(false);
+                });
+
+                return () => unsubscribeFirestore();
+            } else {
+                setUser(null);
+                setIsLoading(false);
             }
-        }
-        setIsLoading(false);
+        });
+
+        return () => unsubscribeAuth();
     }, []);
 
-    const login = (email: string, role: UserRole) => {
-        // Mock user data
-        const mockUser: User = {
-            id: Math.random().toString(36).substr(2, 9),
-            name: email.split('@')[0] || 'User',
-            email: email,
-            role: role,
-            avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-            savedContentIds: [],
-            followingCreatorIds: [],
-        };
-
-        setUser(mockUser);
-        localStorage.setItem('haqiqa_user', JSON.stringify(mockUser));
-
-        // Redirect based on role
-        if (role === 'admin') {
-            router.push('/admin');
-        } else if (role === 'creator') {
-            router.push('/dashboard');
-        } else {
+    const login = async (email: string, password: string) => {
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
             router.push('/');
+        } catch (error) {
+            console.error('Login failed:', error);
+            throw error;
         }
     };
 
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem('haqiqa_user');
-        router.push('/');
+    const register = async (email: string, password: string, role: UserRole = 'user') => {
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const uid = userCredential.user.uid;
+
+            // Special check for the requested admin user
+            const finalRole = email === 'masmedia112255@gmail.com' ? 'admin' : role;
+
+            const userData: User = {
+                id: uid,
+                email,
+                name: email.split('@')[0],
+                role: finalRole,
+                savedContentIds: [],
+                followingCreatorIds: [],
+                createdAt: new Date().toISOString(),
+                isProfileComplete: false,
+            };
+
+            // Write to Firestore
+            await setDoc(doc(db, 'users', uid), {
+                ...userData,
+                createdAt: serverTimestamp(),
+            });
+
+            setUser(userData);
+            router.push('/onboarding');
+        } catch (error) {
+            console.error('Registration failed:', error);
+            throw error;
+        }
+    };
+
+    const logout = async () => {
+        try {
+            await signOut(auth);
+            router.push('/');
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
     };
 
     return (
-        <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+        <AuthContext.Provider value={{
+            user,
+            isLoading,
+            login,
+            register,
+            logout
+        }}>
             {children}
         </AuthContext.Provider>
     );

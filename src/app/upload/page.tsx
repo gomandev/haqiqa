@@ -1,14 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, FileText, Video, Mic, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 type ContentType = 'video' | 'audio' | 'blog';
 
 export default function UploadPage() {
+    const { user, isLoading } = useAuth();
+    const router = useRouter();
     const [selectedType, setSelectedType] = useState<ContentType>('video');
     const [isDragging, setIsDragging] = useState(false);
+
+    useEffect(() => {
+        if (!isLoading && (!user || user.role !== 'creator')) {
+            router.push('/login');
+        }
+    }, [user, isLoading, router]);
+
+    if (isLoading || !user || user.role !== 'creator') {
+        return <div className="flex h-96 items-center justify-center">Loading...</div>;
+    }
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();

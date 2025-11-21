@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, Libre_Baskerville } from "next/font/google";
 import "./globals.css";
 import MainLayout from "@/components/layout/MainLayout";
+import { AuthProvider } from "@/context/AuthContext";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -29,7 +30,9 @@ export default function RootLayout({
       <body
         className={`${outfit.variable} ${libreBaskerville.variable} antialiased font-sans bg-background text-foreground`}
       >
-        <MainLayout>{children}</MainLayout>
+        <AuthProvider>
+          <MainLayout>{children}</MainLayout>
+        </AuthProvider>
       </body>
     </html>
   );

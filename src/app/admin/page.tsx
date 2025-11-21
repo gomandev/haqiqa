@@ -1,22 +1,59 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, X, Clock, AlertCircle } from 'lucide-react';
-import { MOCK_CONTENT, MOCK_CREATORS } from '@/lib/mock-data';
+import { MOCK_CREATORS } from '@/lib/mock-data';
+import { getPendingContent, updateContentStatus } from '@/lib/db';
 import { Content } from '@/lib/types';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function AdminPage() {
-    // Filter for pending content
-    const [pendingContent, setPendingContent] = useState(
-        MOCK_CONTENT.filter((c) => c.status === 'pending')
-    );
+    const { user, isLoading } = useAuth();
+    const router = useRouter();
 
-    const handleAction = (id: string, action: 'approve' | 'reject') => {
-        // Remove from list to simulate action
-        setPendingContent((prev) => prev.filter((c) => c.id !== id));
-        // In a real app, we would make an API call here
+    useEffect(() => {
+        if (!isLoading && (!user || user.role !== 'admin')) {
+            router.push('/login');
+        }
+    }, [user, isLoading, router]);
+
+    // Filter for pending content
+    const [pendingContent, setPendingContent] = useState<Content[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchPending() {
+            if (user && user.role === 'admin') {
+                try {
+                    const content = await getPendingContent();
+                    setPendingContent(content);
+                } catch (error) {
+                    console.error("Error fetching pending content:", error);
+                } finally {
+                    setLoading(false);
+                }
+            }
+        }
+        if (!isLoading) {
+            fetchPending();
+        }
+    }, [user, isLoading]);
+
+    if (isLoading || !user || user.role !== 'admin') {
+        return <div className="flex h-96 items-center justify-center">Loading...</div>;
+    }
+
+    const handleAction = async (id: string, action: 'approve' | 'reject') => {
+        try {
+            await updateContentStatus(id, action === 'approve' ? 'approved' : 'rejected');
+            // Remove from list to simulate action
+            setPendingContent((prev) => prev.filter((c) => c.id !== id));
+        } catch (error) {
+            console.error("Error updating content status:", error);
+        }
     };
 
     return (
@@ -38,7 +75,9 @@ export default function AdminPage() {
                 </div>
 
                 <div className="divide-y">
-                    {pendingContent.length > 0 ? (
+                    {loading ? (
+                        <div className="p-12 text-center text-muted-foreground">Loading pending reviews...</div>
+                    ) : pendingContent.length > 0 ? (
                         pendingContent.map((content) => (
                             <ReviewItem
                                 key={content.id}

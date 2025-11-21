@@ -1,14 +1,52 @@
 'use client';
 
-import { MOCK_CONTENT, MOCK_CREATORS } from '@/lib/mock-data';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { getContentByCreator } from '@/lib/db';
+import { Content } from '@/lib/types';
 import { BarChart3, Users, Play, Heart, Plus, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
 export default function CreatorDashboard() {
-    // Mocking the current user as the first creator
-    const currentCreator = MOCK_CREATORS[0];
-    const myContent = MOCK_CONTENT.filter(c => c.creatorId === currentCreator.id);
+    const { user, isLoading } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!isLoading && (!user || user.role !== 'creator')) {
+            router.push('/login');
+        }
+    }, [user, isLoading, router]);
+
+    if (isLoading || !user || user.role !== 'creator') {
+        return <div className="flex h-96 items-center justify-center">Loading...</div>;
+    }
+
+    const [myContent, setMyContent] = useState<Content[]>([]);
+    const [loadingContent, setLoadingContent] = useState(true);
+
+    useEffect(() => {
+        async function fetchContent() {
+            if (user && user.id) {
+                try {
+                    const content = await getContentByCreator(user.id);
+                    setMyContent(content);
+                } catch (error) {
+                    console.error("Error fetching content:", error);
+                } finally {
+                    setLoadingContent(false);
+                }
+            }
+        }
+
+        if (!isLoading && user) {
+            fetchContent();
+        }
+    }, [user, isLoading]);
+
+    // Safe access to creator specific fields with fallback
+    const followersCount = (user as any).followersCount || 0;
 
     const totalViews = myContent.reduce((acc, curr) => acc + curr.views, 0);
     const totalLikes = myContent.reduce((acc, curr) => acc + curr.likes, 0);
@@ -18,7 +56,7 @@ export default function CreatorDashboard() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="font-serif text-3xl font-bold tracking-tight">Creator Dashboard</h1>
-                    <p className="text-muted-foreground">Welcome back, {currentCreator.name}</p>
+                    <p className="text-muted-foreground">Welcome back, {user.name}</p>
                 </div>
                 <Link
                     href="/upload"
@@ -38,7 +76,7 @@ export default function CreatorDashboard() {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Total Followers</p>
-                            <h3 className="text-2xl font-bold">{currentCreator.followersCount.toLocaleString()}</h3>
+                            <h3 className="text-2xl font-bold">{followersCount.toLocaleString()}</h3>
                         </div>
                     </div>
                 </div>
@@ -72,7 +110,9 @@ export default function CreatorDashboard() {
                     <h2 className="text-lg font-semibold">My Content</h2>
                 </div>
                 <div className="divide-y">
-                    {myContent.length > 0 ? (
+                    {loadingContent ? (
+                        <div className="p-12 text-center text-muted-foreground">Loading content...</div>
+                    ) : myContent.length > 0 ? (
                         myContent.map((content) => (
                             <div key={content.id} className="flex items-center justify-between p-6">
                                 <div className="flex items-center gap-4">
