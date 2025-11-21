@@ -1,65 +1,122 @@
-import Image from "next/image";
+import ContentCard from '@/components/ContentCard';
+import { MOCK_CONTENT } from '@/lib/mock-data';
+import { ArrowRight, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Home() {
+  const approvedContent = MOCK_CONTENT.filter(c => c.status === 'approved');
+
+  // Mock selection for different sections
+  const heroContent = approvedContent[0];
+  const trendingContent = approvedContent.slice(1, 5);
+  const latestContent = approvedContent.slice(5);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="space-y-12 pb-10">
+      {/* Hero Section */}
+      {heroContent && (
+        <section className="relative">
+          <ContentCard content={heroContent} variant="featured" />
+        </section>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        {/* Main Content Column */}
+        <div className="lg:col-span-8 space-y-12">
+          {/* Trending Section */}
+          <section className="space-y-6">
+            <div className="flex items-center gap-2 border-b pb-4">
+              <TrendingUp className="h-5 w-5 text-primary-600" />
+              <h2 className="text-xl font-bold tracking-tight">Trending Now</h2>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2">
+              {trendingContent.map((content) => (
+                <ContentCard key={content.id} content={content} />
+              ))}
+            </div>
+          </section>
+
+          {/* Latest Feed */}
+          <section className="space-y-6">
+            <div className="flex items-center justify-between border-b pb-4">
+              <h2 className="text-xl font-bold tracking-tight">Latest Stories</h2>
+              <Link href="/explore" className="text-sm font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1">
+                View all <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="space-y-6">
+              {latestContent.length > 0 ? (
+                latestContent.map((content) => (
+                  <ContentCard key={content.id} content={content} variant="compact" />
+                ))
+              ) : (
+                <p className="text-muted-foreground">No more content to load.</p>
+              )}
+            </div>
+          </section>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        {/* Sidebar Column */}
+        <aside className="lg:col-span-4 space-y-8">
+          {/* Newsletter / CTA */}
+          <div className="rounded-xl bg-primary-50 p-6 dark:bg-primary-900/10 border border-primary-100 dark:border-primary-900/20">
+            <h3 className="font-serif text-xl font-bold mb-2">Subscribe to Haqiqa</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Get the latest Islamic insights and updates delivered directly to your inbox.
+            </p>
+            <div className="space-y-2">
+              <input
+                type="email"
+                placeholder="Your email address"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+              <button className="w-full rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                Subscribe
+              </button>
+            </div>
+          </div>
+
+          {/* Categories / Topics */}
+          <div className="space-y-4">
+            <h3 className="font-bold text-lg border-b pb-2">Discover Topics</h3>
+            <div className="flex flex-wrap gap-2">
+              {['Theology', 'History', 'Spirituality', 'Lifestyle', 'Quran', 'Hadith', 'Family'].map((topic) => (
+                <Link
+                  key={topic}
+                  href={`/explore?topic=${topic.toLowerCase()}`}
+                  className="rounded-full border bg-background px-3 py-1 text-xs font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  {topic}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Top Creators */}
+          <div className="space-y-4">
+            <h3 className="font-bold text-lg border-b pb-2">Featured Creators</h3>
+            <div className="space-y-4">
+              {/* Mock featured creators list */}
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-muted"></div>
+                <div>
+                  <p className="text-sm font-medium">Sheikh Ahmed</p>
+                  <p className="text-xs text-muted-foreground">Scholar</p>
+                </div>
+                <button className="ml-auto text-xs font-medium text-primary-600">Follow</button>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-muted"></div>
+                <div>
+                  <p className="text-sm font-medium">Sister Fatima</p>
+                  <p className="text-xs text-muted-foreground">Educator</p>
+                </div>
+                <button className="ml-auto text-xs font-medium text-primary-600">Follow</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
